@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install renderpulse from GitHub releases (private repo: needs gh or GITHUB_TOKEN).
+# Install renderpulse from GitHub releases (public repo; plain curl, no auth needed).
 # Usage: bash install.sh [version]   (default: latest)
 set -euo pipefail
 
