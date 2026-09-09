@@ -31,16 +31,16 @@ Grab a prebuilt static binary from the [**releases page**](https://github.com/pe
 
 Checksums: [checksums.txt](https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/checksums.txt) — verify with `sha256sum -c checksums.txt`.
 
-> This repo is **private**, so browser downloads require being signed into a GitHub account with access. On a server, use `gh` (logged in) or `curl` with a token — both shown below.
+> The repo is **public** — the links above download directly in a browser or with plain `curl`, no authentication. `gh` also works if you have it.
 
 ```bash
-# easiest on a server (gh handles auth for private repos)
+# direct download, no auth needed (public repo)
+curl -fL -o renderpulse.tar.gz \
+  "https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/renderpulse_0.2.0_linux_arm64.tar.gz"
+
+# or with gh
 gh release download v0.2.0 --repo pentoshi007/renderpulse --pattern '*linux_arm64*'
 tar xzf renderpulse_0.2.0_linux_arm64.tar.gz && sudo install renderpulse_0.2.0_linux_arm64/renderpulse /usr/local/bin/
-
-# or with a token
-curl -fL -H "Authorization: Bearer $GITHUB_TOKEN" -o renderpulse.tar.gz \
-  "https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/renderpulse_0.2.0_linux_arm64.tar.gz"
 ```
 
 Windows: download the `.zip`, extract, run `renderpulse.exe` from PowerShell/cmd.

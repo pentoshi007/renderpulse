@@ -36,20 +36,21 @@ if command -v gh >/dev/null 2>&1; then
   fi
   # shellcheck disable=SC2086
   gh release download ${VERSION#latest} --repo "$REPO" --dir "$TMP" $PAT --pattern "checksums.txt" --clobber
-elif [ -n "${GITHUB_TOKEN:-}" ]; then
-  echo ">> downloading renderpulse $VERSION ($os/$arch) via curl + GITHUB_TOKEN"
+else
+  echo ">> downloading renderpulse $VERSION ($os/$arch) via curl"
   if [ "$VERSION" = "latest" ]; then
-    VERSION="$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" \
-      "https://api.github.com/repos/$REPO/releases/latest" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')"
+    VERSION="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')"
     [ -n "$VERSION" ] || fail "could not resolve latest release"
   fi
   base="$(asset "${VERSION#v}")"
   if [ "$os" = "windows" ]; then ext="zip"; else ext="tar.gz"; fi
-  curl -fL -H "Authorization: Bearer $GITHUB_TOKEN" \
-    -o "$TMP/$base.$ext" \
+  AUTH=()
+  [ -n "${GITHUB_TOKEN:-}" ] && AUTH=(-H "Authorization: Bearer $GITHUB_TOKEN")
+  # shellcheck disable=SC2046,SC2086
+  curl -fL "${AUTH[@]}" -o "$TMP/$base.$ext" \
     "https://github.com/$REPO/releases/download/$VERSION/$base.$ext"
-else
-  fail "this repo is private: install gh and run 'gh auth login', or export GITHUB_TOKEN"
+  curl -fsSL "${AUTH[@]}" -o "$TMP/checksums.txt" \
+    "https://github.com/$REPO/releases/download/$VERSION/checksums.txt" || true
 fi
 
 cd "$TMP"
