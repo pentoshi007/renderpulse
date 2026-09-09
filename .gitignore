@@ -1,0 +1,7 @@
+dist/
+renderpulse
+renderpulse.exe
+*.test
+coverage.out
+*.log
+*.log.1

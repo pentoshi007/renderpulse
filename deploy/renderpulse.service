@@ -1,0 +1,24 @@
+[Unit]
+Description=renderpulse - Render free-tier keep-alive daemon
+Documentation=https://github.com/pentoshi007/renderpulse
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/renderpulse
+# Split the fleet across two machines with e.g. --shard 1/2 here and --shard 2/2
+# on the other host. Leave 1/1 to have each machine cover the whole fleet.
+Restart=always
+RestartSec=30
+# Hardened-ish defaults; renderpulse needs no special privileges.
+DynamicUser=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=-/var/log/renderpulse
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
