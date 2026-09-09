@@ -16,9 +16,27 @@ Render spins down a Free web service that goes **15 minutes without inbound traf
 - **Cold-start tolerant** — 90 s request timeout (Render takes ~1 min to spin a service back up), with a few quick retries when a host is unreachable.
 - **Ops-friendly** — `--once`, `--dry-run`, `--log-file` with size-based rotation, `--log-json`, graceful SIGTERM shutdown. Single static binary, zero runtime dependencies.
 
-## Download
+## Install
 
-Grab a prebuilt static binary from the [**releases page**](https://github.com/pentoshi007/renderpulse/releases) — latest is [**v0.2.0**](https://github.com/pentoshi007/renderpulse/releases/tag/v0.2.0):
+One command — downloads the latest release binary for your OS/arch, verifies its SHA-256 checksum, installs it, and runs `renderpulse --version`. No authentication, no `gh`, no prerequisites beyond `curl` and `tar`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pentoshi007/renderpulse/main/install.sh | bash
+```
+
+It installs to `/usr/local/bin` (sudo when available) or `~/.local/bin` (no sudo prompt) — if it lands in `~/.local/bin`, add it to your PATH as the script tells you. Prefer to inspect first? Read [install.sh](install.sh).
+
+Verify:
+
+```bash
+renderpulse --version
+```
+
+Windows: download a `.zip` from the links below, extract, run `renderpulse.exe`.
+
+## Direct downloads
+
+Static binaries from the [releases page](https://github.com/pentoshi007/renderpulse/releases) — latest is [v0.2.0](https://github.com/pentoshi007/renderpulse/releases/tag/v0.2.0). Direct links, no authentication:
 
 | OS | Arch | Download |
 |---|---|---|
@@ -29,56 +47,12 @@ Grab a prebuilt static binary from the [**releases page**](https://github.com/pe
 | Windows | amd64 | [renderpulse_0.2.0_windows_amd64.zip](https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/renderpulse_0.2.0_windows_amd64.zip) |
 | Windows | arm64 | [renderpulse_0.2.0_windows_arm64.zip](https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/renderpulse_0.2.0_windows_arm64.zip) |
 
-Checksums: [checksums.txt](https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/checksums.txt) — verify with `sha256sum -c checksums.txt`.
+Checksums: [checksums.txt](https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/checksums.txt) — `sha256sum -c checksums.txt`.
 
-> The repo is **public** — the links above download directly in a browser or with plain `curl`, no authentication. `gh` also works if you have it.
-
-```bash
-# direct download, no auth needed (public repo)
-curl -fL -o renderpulse.tar.gz \
-  "https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/renderpulse_0.2.0_linux_arm64.tar.gz"
-
-# or with gh
-gh release download v0.2.0 --repo pentoshi007/renderpulse --pattern '*linux_arm64*'
-tar xzf renderpulse_0.2.0_linux_arm64.tar.gz && sudo install renderpulse_0.2.0_linux_arm64/renderpulse /usr/local/bin/
-```
-
-Windows: download the `.zip`, extract, run `renderpulse.exe` from PowerShell/cmd.
-
-## Install
-
-### One-liner (Linux/macOS, no auth)
+## From source
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/pentoshi007/renderpulse/main/install.sh | bash
-```
-
-`install.sh` detects your OS/arch, downloads the matching release asset over plain HTTPS, verifies the SHA-256 checksum, and installs to `/usr/local/bin/renderpulse`. No GitHub account, token, or `gh` needed.
-
-Prefer to inspect first? Read [install.sh](install.sh), or clone and run it:
-
-```bash
-git clone https://github.com/pentoshi007/renderpulse && cd renderpulse && sudo bash install.sh
-```
-
-### Manual
-
-```bash
-curl -fL -o renderpulse.tar.gz \
-  "https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/renderpulse_0.2.0_linux_arm64.tar.gz"
-curl -fL -o checksums.txt \
-  "https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/checksums.txt"
-sha256sum -c checksums.txt
-tar xzf renderpulse_0.2.0_linux_arm64.tar.gz
-sudo install renderpulse_0.2.0_linux_arm64/renderpulse /usr/local/bin/
-```
-
-Windows: download `renderpulse_<ver>_windows_amd64.zip`, extract, run `renderpulse.exe` from PowerShell/cmd.
-
-### From source
-```bash
-git clone https://github.com/pentoshi007/renderpulse
-cd renderpulse && go build -o renderpulse .
+git clone https://github.com/pentoshi007/renderpulse && cd renderpulse && go build -o renderpulse .
 ```
 
 ## Usage
