@@ -126,9 +126,10 @@ time=2026-09-09T15:40:09+05:30 level=INFO msg="next visit scheduled" service=adm
 
 Any HTTP status (200/401/404…) counts as a successful keep-alive — the app itself answered. `request failed` lines mean the host was unreachable; renderpulse retries a few times quickly, then continues on schedule.
 
-## Fair use
+## Fair use — read this before running 24/7
 
-Keep-alive pingers are a common workaround, but Render's free tier is intended for hobby projects and the docs ask you not to treat it as production. Keep intervals reasonable (the defaults are deliberately modest) and expect Render to change free-tier behavior at any time.
+- Render grants each workspace **750 free instance-hours per month**. A free service consumes hours only while *running*; 6 services kept awake 24/7 burn ~4320 hours, exhausting the budget in about **5 days**, after which Render suspends all free web services until the next month ([docs](https://render.com/docs/free#free-instance-hours)). If you need all six always-on, budget for a paid instance on some of them, or let renderpulse run only during hours you actually use the stack (e.g. a systemd timer window).
+- Keep-alive pingers are a common workaround, but Render's free tier is intended for hobby projects and the docs ask you not to treat it as production. Keep intervals reasonable (the defaults are deliberately modest) and expect Render to change free-tier behavior at any time.
 
 ## License
 
