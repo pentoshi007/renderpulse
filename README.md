@@ -47,27 +47,30 @@ Windows: download the `.zip`, extract, run `renderpulse.exe` from PowerShell/cmd
 
 ## Install
 
-### One-liner (Linux/macOS, with gh installed)
+### One-liner (Linux/macOS, no auth)
 
 ```bash
-gh repo clone pentoshi007/renderpulse   # only needed for install.sh
-cd renderpulse && sudo bash install.sh
+curl -fsSL https://raw.githubusercontent.com/pentoshi007/renderpulse/main/install.sh | bash
 ```
 
-`install.sh` detects your OS/arch, downloads the matching release asset with `gh` (or `curl` + `GITHUB_TOKEN`), verifies the SHA-256 checksum, and installs to `/usr/local/bin/renderpulse`.
+`install.sh` detects your OS/arch, downloads the matching release asset over plain HTTPS, verifies the SHA-256 checksum, and installs to `/usr/local/bin/renderpulse`. No GitHub account, token, or `gh` needed.
+
+Prefer to inspect first? Read [install.sh](install.sh), or clone and run it:
+
+```bash
+git clone https://github.com/pentoshi007/renderpulse && cd renderpulse && sudo bash install.sh
+```
 
 ### Manual
 
 ```bash
-# with gh
-gh release download v0.2.0 --repo pentoshi007/renderpulse --pattern '*linux_arm64*' --pattern 'checksums.txt'
+curl -fL -o renderpulse.tar.gz \
+  "https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/renderpulse_0.2.0_linux_arm64.tar.gz"
+curl -fL -o checksums.txt \
+  "https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/checksums.txt"
+sha256sum -c checksums.txt
 tar xzf renderpulse_0.2.0_linux_arm64.tar.gz
 sudo install renderpulse_0.2.0_linux_arm64/renderpulse /usr/local/bin/
-
-# or with a token
-curl -fL -H "Authorization: Bearer $GITHUB_TOKEN" \
-  -o renderpulse.tar.gz \
-  "https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/renderpulse_0.2.0_linux_arm64.tar.gz"
 ```
 
 Windows: download `renderpulse_<ver>_windows_amd64.zip`, extract, run `renderpulse.exe` from PowerShell/cmd.
