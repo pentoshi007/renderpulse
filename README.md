@@ -16,9 +16,36 @@ Render spins down a Free web service that goes **15 minutes without inbound traf
 - **Cold-start tolerant** — 90 s request timeout (Render takes ~1 min to spin a service back up), with a few quick retries when a host is unreachable.
 - **Ops-friendly** — `--once`, `--dry-run`, `--log-file` with size-based rotation, `--log-json`, graceful SIGTERM shutdown. Single static binary, zero runtime dependencies.
 
-## Install
+## Download
 
-Prebuilt static binaries for **Linux / macOS / Windows × amd64 / arm64** are attached to every [release](../../releases). This repo is private, so downloads need `gh` (logged in) or a token.
+Grab a prebuilt static binary from the [**releases page**](https://github.com/pentoshi007/renderpulse/releases) — latest is [**v0.2.0**](https://github.com/pentoshi007/renderpulse/releases/tag/v0.2.0):
+
+| OS | Arch | Download |
+|---|---|---|
+| Linux | amd64 | [renderpulse_0.2.0_linux_amd64.tar.gz](https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/renderpulse_0.2.0_linux_amd64.tar.gz) |
+| Linux | arm64 | [renderpulse_0.2.0_linux_arm64.tar.gz](https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/renderpulse_0.2.0_linux_arm64.tar.gz) |
+| macOS | amd64 | [renderpulse_0.2.0_darwin_amd64.tar.gz](https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/renderpulse_0.2.0_darwin_amd64.tar.gz) |
+| macOS | arm64 | [renderpulse_0.2.0_darwin_arm64.tar.gz](https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/renderpulse_0.2.0_darwin_arm64.tar.gz) |
+| Windows | amd64 | [renderpulse_0.2.0_windows_amd64.zip](https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/renderpulse_0.2.0_windows_amd64.zip) |
+| Windows | arm64 | [renderpulse_0.2.0_windows_arm64.zip](https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/renderpulse_0.2.0_windows_arm64.zip) |
+
+Checksums: [checksums.txt](https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/checksums.txt) — verify with `sha256sum -c checksums.txt`.
+
+> This repo is **private**, so browser downloads require being signed into a GitHub account with access. On a server, use `gh` (logged in) or `curl` with a token — both shown below.
+
+```bash
+# easiest on a server (gh handles auth for private repos)
+gh release download v0.2.0 --repo pentoshi007/renderpulse --pattern '*linux_arm64*'
+tar xzf renderpulse_0.2.0_linux_arm64.tar.gz && sudo install renderpulse_0.2.0_linux_arm64/renderpulse /usr/local/bin/
+
+# or with a token
+curl -fL -H "Authorization: Bearer $GITHUB_TOKEN" -o renderpulse.tar.gz \
+  "https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/renderpulse_0.2.0_linux_arm64.tar.gz"
+```
+
+Windows: download the `.zip`, extract, run `renderpulse.exe` from PowerShell/cmd.
+
+## Install
 
 ### One-liner (Linux/macOS, with gh installed)
 
@@ -33,14 +60,14 @@ cd renderpulse && sudo bash install.sh
 
 ```bash
 # with gh
-gh release download v0.1.0 --repo pentoshi007/renderpulse --pattern '*linux_arm64*'
-tar xzf renderpulse_0.1.0_linux_arm64.tar.gz
-sudo install renderpulse_0.1.0_linux_arm64/renderpulse /usr/local/bin/
+gh release download v0.2.0 --repo pentoshi007/renderpulse --pattern '*linux_arm64*' --pattern 'checksums.txt'
+tar xzf renderpulse_0.2.0_linux_arm64.tar.gz
+sudo install renderpulse_0.2.0_linux_arm64/renderpulse /usr/local/bin/
 
 # or with a token
 curl -fL -H "Authorization: Bearer $GITHUB_TOKEN" \
   -o renderpulse.tar.gz \
-  "https://github.com/pentoshi007/renderpulse/releases/download/v0.1.0/renderpulse_0.1.0_linux_arm64.tar.gz"
+  "https://github.com/pentoshi007/renderpulse/releases/download/v0.2.0/renderpulse_0.2.0_linux_arm64.tar.gz"
 ```
 
 Windows: download `renderpulse_<ver>_windows_amd64.zip`, extract, run `renderpulse.exe` from PowerShell/cmd.
@@ -70,7 +97,11 @@ renderpulse [flags]
 | `--log-file` | stdout | append logs here, rotate at `--log-max-mb` (keeps one `.1` generation) |
 | `--log-json` | off | JSON log lines |
 | `--seed` | machine-id | override the randomness seed |
-| `--list-services` | — | print the fleet and shard assignment, then exit |
+| `--add` | — | add or replace a service as `name=url` (repeatable; bare `https://host` also works) |
+| `--remove` | — | remove a service by name (repeatable, applied after `--add`) |
+| `--services-file` | — | JSON file of services with optional routes |
+| `--no-builtin` | off | drop the built-in tomato fleet; keep only your own services |
+| `--list-services` | — | **view** the active fleet and shard assignment, then exit |
 | `--version` | — | print version |
 
 Try it safely first:
@@ -79,6 +110,34 @@ Try it safely first:
 renderpulse --dry-run --once
 renderpulse --once --log-json
 ```
+
+## Managing services (add / view / remove)
+
+```bash
+# add a new URL (name=url, repeatable)
+renderpulse --add blog=https://blog.onrender.com
+
+# a bare URL works too (name derived from the host)
+renderpulse --add https://api.onrender.com
+
+# view the active fleet and shard assignment
+renderpulse --list-services
+
+# remove a service by name (repeatable; unknown names are an error)
+renderpulse --remove rider
+
+# fully custom fleet from JSON, with optional weighted routes
+cat > my-services.json <<'EOF'
+[
+  {"name": "blog", "url": "https://blog.onrender.com",
+   "routes": [{"path": "/", "weight": 10}, {"path": "/api/posts", "weight": 5}]},
+  {"name": "api", "url": "api.onrender.com"}
+]
+EOF
+renderpulse --no-builtin --services-file my-services.json
+```
+
+Precedence: `--services-file` overrides built-ins, `--add` overrides both, `--remove` is applied last. Services without explicit routes use a generic pool (`/`, `/api`, `/api/health`, `/health`, `/api/status`, `/status`, `/favicon.ico`). Run `renderpulse --help` for the full reference.
 
 ## Run forever on two Oracle Linux machines
 

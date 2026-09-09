@@ -1,12 +1,18 @@
 package config
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pentoshi007/renderpulse/internal/services"
 )
+
+// Version is stamped by main before Parse so it shows in --help output.
+var Version = "dev"
 
 // Shard selects services i/n so two machines can split the fleet without
 // ever sending duplicate traffic for the same service.
@@ -33,6 +39,7 @@ type Config struct {
 	Seed          string
 	ShowVersion   bool
 	ListServices  bool
+	Services      services.AddOptions
 }
 
 const (
@@ -62,12 +69,60 @@ func Parse(args []string) (*Config, error) {
 	fs.IntVar(&cfg.LogMaxMB, "log-max-mb", DefaultLogMaxMB, "rotate the log file once it exceeds this many megabytes")
 	fs.StringVar(&cfg.Seed, "seed", "", "override the randomness seed (default: derived from this machine's identity)")
 	fs.BoolVar(&cfg.ShowVersion, "version", false, "print version and exit")
-	fs.BoolVar(&cfg.ListServices, "list-services", false, "print the built-in services and the shard assignment, then exit")
+	fs.BoolVar(&cfg.ListServices, "list-services", false, "view the active services and the shard assignment, then exit")
+	fs.Var(stringSlice{&cfg.Services.Adds}, "add", "add (or replace) a service as name=url, repeatable, e.g. --add blog=https://blog.onrender.com")
+	fs.Var(stringSlice{&cfg.Services.Removes}, "remove", "remove a service by name, repeatable, e.g. --remove rider (applied after --add)")
+	fs.StringVar(&cfg.Services.File, "services-file", "", "load extra services (with optional routes) from a JSON file")
+	fs.BoolVar(&cfg.Services.NoBuiltin, "no-builtin", false, "drop the built-in tomato fleet; keep only --add / --services-file services")
 	fs.Usage = func() {
-		fmt.Fprintf(fs.Output(), "renderpulse keeps Render free-tier web services awake by sending\nrealistic, randomized requests well inside the 15-minute spin-down window.\n\nUsage: renderpulse [flags]\n\nFlags:\n")
+		out := fs.Output()
+		fmt.Fprintf(out, `renderpulse %s — keep Render free-tier services awake with realistic, randomized traffic.
+
+Render spins down a Free web service after 15 minutes without inbound traffic
+(https://render.com/docs/free). renderpulse visits every service on its own
+independent, randomized schedule (default every 3-7 minutes) so the idle timer
+never expires. All requests are GETs with human-looking browser headers.
+
+Usage:
+  renderpulse [flags]
+
+Managing services (view / add / remove):
+  --list-services                     view the active fleet and shard assignment
+  --add name=url                      add or replace a service (repeatable);
+                                      a bare https://host also works
+  --remove name                       remove a service by name (repeatable)
+  --services-file FILE                add services from JSON, e.g.:
+        [
+          {"name":"blog","url":"https://blog.onrender.com",
+           "routes":[{"path":"/","weight":10},{"path":"/api/posts","weight":5}]}
+        ]
+                                      services without routes get a generic pool:
+                                      /, /api, /api/health, /health, /api/status,
+                                      /status, /favicon.ico
+  --no-builtin                        use only your own services
+
+Precedence: --services-file overrides built-ins, --add overrides both,
+--remove is applied last. Use --list-services to view the result.
+
+Examples:
+  renderpulse                                        # keep all 6 tomato services awake
+  renderpulse --list-services                        # view the active fleet
+  renderpulse --dry-run --once                       # preview one visit per service
+  renderpulse --add blog=https://blog.onrender.com   # add a new URL
+  renderpulse --remove rider                         # stop pinging one service
+  renderpulse --no-builtin --services-file mine.json # fully custom fleet
+  renderpulse --shard 1/2                            # machine 1 of 2 (services 1,3,5..)
+  renderpulse --shard 2/2                            # machine 2 of 2 (services 2,4,6..)
+  renderpulse --log-file /var/log/renderpulse.log --log-json
+
+Flags:
+`, Version)
 		fs.PrintDefaults()
 	}
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil, flag.ErrHelp // usage already printed; caller exits 0
+		}
 		return nil, err
 	}
 	parsed, err := ParseShard(*shard)
@@ -119,5 +174,20 @@ func (c *Config) validate() error {
 	if c.IntervalMax >= 14*time.Minute {
 		return fmt.Errorf("--interval-max (%s) leaves no safety margin under Render's 15-minute spin-down", c.IntervalMax)
 	}
+	return nil
+}
+
+// stringSlice lets a flag be repeated and collect every occurrence.
+type stringSlice struct{ p *[]string }
+
+func (s stringSlice) String() string {
+	if s.p == nil {
+		return "" // flag pkg calls the zero value to render defaults
+	}
+	return strings.Join(*s.p, ",")
+}
+
+func (s stringSlice) Set(v string) error {
+	*s.p = append(*s.p, v)
 	return nil
 }

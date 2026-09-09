@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -20,8 +21,12 @@ import (
 var version = "dev"
 
 func main() {
+	config.Version = version
 	cfg, err := config.Parse(os.Args[1:])
 	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return // --help/-h already printed usage
+		}
 		fmt.Fprintln(os.Stderr, "renderpulse:", err)
 		os.Exit(2)
 	}
@@ -29,13 +34,19 @@ func main() {
 	case cfg.ShowVersion:
 		fmt.Printf("renderpulse %s (%s/%s)\n", version, runtime.GOOS, runtime.GOARCH)
 		return
-	case cfg.ListServices:
-		listServices(*cfg)
-		return
 	}
-	if err := services.Validate(services.All); err != nil {
+	fleet, err := services.Compose(cfg.Services)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "renderpulse:", err)
+		os.Exit(2)
+	}
+	if err := services.Validate(fleet); err != nil {
 		fmt.Fprintln(os.Stderr, "renderpulse:", err)
 		os.Exit(1)
+	}
+	if cfg.ListServices {
+		listServices(*cfg, fleet)
+		return
 	}
 
 	log, closer, err := logging.New(*cfg)
@@ -45,7 +56,7 @@ func main() {
 	}
 	defer closer.Close()
 
-	svcs := services.ForShard(services.All, cfg.Shard.Index, cfg.Shard.Count)
+	svcs := services.ForShard(fleet, cfg.Shard.Index, cfg.Shard.Count)
 	if len(svcs) == 0 {
 		log.Error("shard assignment is empty", "shard", cfg.Shard.String())
 		os.Exit(1)
@@ -73,8 +84,8 @@ func main() {
 	log.Info("renderpulse stopped")
 }
 
-func listServices(cfg config.Config) {
-	for i, s := range services.All {
+func listServices(cfg config.Config, fleet []services.Service) {
+	for i, s := range fleet {
 		mark := " "
 		if i%cfg.Shard.Count == cfg.Shard.Index-1 {
 			mark = "*"
