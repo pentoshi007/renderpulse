@@ -30,11 +30,12 @@ asset() { # version -> asset basename
 
 if command -v gh >/dev/null 2>&1; then
   echo ">> downloading renderpulse $VERSION ($os/$arch) via gh"
-  if [ "$VERSION" = "latest" ]; then
-    gh release download --repo "$REPO" --dir "$TMP" --pattern "$(asset '*')*" --clobber
-  else
-    gh release download "$VERSION" --repo "$REPO" --dir "$TMP" --pattern "$(asset "$VERSION")*" --clobber
+  PAT="--pattern $(asset '*')"
+  if [ "$VERSION" != "latest" ]; then
+    PAT="--pattern $(asset "${VERSION#v}")*"
   fi
+  # shellcheck disable=SC2086
+  gh release download ${VERSION#latest} --repo "$REPO" --dir "$TMP" $PAT --pattern "checksums.txt" --clobber
 elif [ -n "${GITHUB_TOKEN:-}" ]; then
   echo ">> downloading renderpulse $VERSION ($os/$arch) via curl + GITHUB_TOKEN"
   if [ "$VERSION" = "latest" ]; then
